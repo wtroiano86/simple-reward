@@ -1,0 +1,15 @@
+/vendor/
+/composer.lock
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpstan/
+/.php-cs-fixer.cache
+/tmp/
+/temp/
+/.idea/
+/.ijfw/
+/.planning/
+/composer.local.json
+/composer.local.lock
+.DS_Store
+._*

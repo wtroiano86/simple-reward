@@ -1,0 +1,38 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        $tableName = Config::string('simple-reward.table_name', 'rewards');
+        // Bound index names while distinguishing configured tables and connection prefixes.
+        $indexPrefix = 'sr_'.substr(hash('sha256', Schema::getConnection()->getTablePrefix().$tableName), 0, 16);
+
+        Schema::create($tableName, function (Blueprint $table) use ($indexPrefix): void {
+            $table->id();
+            $table->morphs('rewardable', $indexPrefix.'_owner_idx');
+            $table->decimal('amount', 10, 2);
+            $table->decimal('running_balance', 10, 2);
+            $table->string('description')->nullable();
+            $table->string('type');
+            $table->json('metadata')->nullable();
+            $table->string('rule_application_key', 64)->nullable()->unique($indexPrefix.'_rule_unique');
+            $table->timestamps();
+
+            $table->index(['rewardable_type', 'rewardable_id', 'id'], $indexPrefix.'_owner_id_idx');
+            $table->index(['rewardable_type', 'rewardable_id', 'created_at'], $indexPrefix.'_owner_created_idx');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists(Config::string('simple-reward.table_name', 'rewards'));
+    }
+};

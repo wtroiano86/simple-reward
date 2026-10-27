@@ -1,0 +1,93 @@
+name: Package checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dependencies: [highest, lowest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, zip, sqlite3
+          coverage: xdebug
+          tools: composer:v2
+      - run: composer validate --strict
+      - name: Install highest dependencies
+        if: matrix.dependencies == 'highest'
+        run: composer update --prefer-dist --prefer-stable --no-interaction
+      - name: Install lowest resolvable dependencies
+        if: matrix.dependencies == 'lowest'
+        run: composer update --prefer-dist --prefer-lowest --prefer-stable --no-interaction
+      - run: composer test
+      - run: composer audit --no-dev
+      - run: composer test:docs
+      - run: composer test:distribution
+      - name: Build release archive
+        if: matrix.dependencies == 'highest'
+        run: composer archive --format=zip --dir=tmp/release --file=simple-reward --no-interaction
+      - uses: actions/upload-artifact@v4
+        if: matrix.dependencies == 'highest'
+        with:
+          name: simple-reward-package
+          path: tmp/release/simple-reward.zip
+          if-no-files-found: error
+
+  databases:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - driver: mysql
+            image: mysql:8.4
+            port: 3306
+            username: root
+            healthcheck: mysqladmin ping --host=localhost --password=testing
+          - driver: pgsql
+            image: postgres:17
+            port: 5432
+            username: postgres
+            healthcheck: pg_isready --username=postgres --dbname=simple_reward_test
+    services:
+      database:
+        image: ${{ matrix.image }}
+        env:
+          MYSQL_DATABASE: simple_reward_test
+          MYSQL_ROOT_PASSWORD: testing
+          MYSQL_ROOT_HOST: '%'
+          POSTGRES_DB: simple_reward_test
+          POSTGRES_PASSWORD: testing
+        ports:
+          - ${{ matrix.port }}:${{ matrix.port }}
+        options: >-
+          --health-cmd="${{ matrix.healthcheck }}"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      REWARD_TEST_DB_DRIVER: ${{ matrix.driver }}
+      REWARD_TEST_DB_PORT: ${{ matrix.port }}
+      REWARD_TEST_DB_USERNAME: ${{ matrix.username }}
+      REWARD_TEST_DB_PASSWORD: testing
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, dom, zip, pdo_mysql, pdo_pgsql
+          coverage: none
+          tools: composer:v2
+      - run: composer install --prefer-dist --no-interaction
+      - run: composer test:unit

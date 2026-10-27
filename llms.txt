@@ -1,0 +1,18 @@
+# Simple Reward
+
+> A Laravel 13 reward ledger for PHP 8.5. Package: wtroiano/simple-reward. Namespace: Wtroiano\SimpleReward.
+
+- [Documentation](docs/README.md)
+- [Installation and configuration](docs/consumers/getting-started.md)
+- [Rewards, transfers, history, and events](docs/consumers/rewards.md)
+- [Metadata queries](docs/consumers/metadata.md)
+- [Reward rule classes](docs/consumers/rules.md)
+- [Architecture and boundaries](docs/architecture.md)
+- [Laravel Boost guidelines and development skill](docs/boost.md)
+- [Testing](docs/development/testing.md)
+
+Add HasRewards to a saved Eloquent model. Use rewardCredit, rewardDebit, rewardTransfer, rewardBalance, hasRewards, rewardHistory, rewardBalanceAt, rewardsByMeta, and rewardsHistoryWithMeta. Configuration is simple-reward; the default table is rewards. Publish tags: simple-reward-config and simple-reward-migrations. Events: RewardsCredited, RewardsDebited, RewardsTransferred. InsufficientRewardException reports unavailable rewards.
+
+Optional RewardRules applies fixed awards defined by classes implementing Contracts\RewardRule through the ledger. Its owner implements Contracts\Rewardable and uses HasRewards. Configure rules with class names resolved through Laravel. The rewards table stores a nullable unique rule_application_key for rule credits; ordinary ledger entries leave it null. The same ledger migration supports both paths. The service applies all new awards atomically and prevents repeat awards per owner, rule key and source ID, independent of rule version. Applications supply trusted context and own authorization and event delivery.
+
+The shipped simple-reward-development Boost skill guides consuming applications through ledger integration, typed rule classes, stable source identities and behavior tests. Its source is resources/boost/skills/simple-reward-development/SKILL.md; core guidelines route to it for implementation details.
